@@ -7,7 +7,16 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <ctype.h>
+/**
+* A simple C implementation of the `ps x -o pid,comm,rss` command.
+* Created by Jan Friedli
+* Date 04.01.2018
+*/
 
+/**
+* This function removes all the whitespace of string
+* It does return it
+*/
 char *trimwhitespace(char *str)
 {
   char *end;
@@ -25,12 +34,20 @@ char *trimwhitespace(char *str)
   return str;
 }
 
+/**
+* This function removes a substring from a given string
+* It works with it by reference
+*/
 void removeSubstring(char *s,const char *toremove)
 {
   while( s=strstr(s,toremove) )
     memmove(s,s+strlen(toremove),1+strlen(s+strlen(toremove)));
 }
 
+/**
+* Build the path of the status file
+* It does return it
+*/
 char *getStatusFilePath(char *name, char *dir)
 {
   char *filePath = malloc(12);
@@ -42,6 +59,11 @@ char *getStatusFilePath(char *name, char *dir)
   return filePath;
 }
 
+/**
+* This function checks if  a given patten is on the current line
+* and retrieves its value
+* It does return it
+*/
 int checkForRssLine(char *line, char *name)
 {
   int value = -1;
@@ -54,16 +76,26 @@ int checkForRssLine(char *line, char *name)
   return value;
 }
 
-void printdir(char *dir, int depth)
+/**
+* This function does go trough all subfolders in a given folder which have the
+* the same owner as the user who is running the script.
+* For every folder it gets the status file and reads the important info from it
+* It does print the result to the stdout
+*/
+void ps(char *dir)
 {
     DIR *dp;
     struct dirent *entry;
     struct stat statbuf;
+
+    // handle directory error
     if((dp = opendir(dir)) == NULL) {
         fprintf(stderr,"cannot open directory: %s\n", dir);
         return;
     }
+
     chdir(dir);
+
     while((entry = readdir(dp)) != NULL) {
         lstat(entry->d_name,&statbuf);
         if(S_ISDIR(statbuf.st_mode)) {
@@ -73,21 +105,22 @@ void printdir(char *dir, int depth)
               continue;
             }
 
+            // only handle the user owned dirs
             if (statbuf.st_uid == getuid()) {
-              // Pid
-              printf("%s ",entry->d_name);
-
               FILE *fp;
-              char buff[255];
+              char buff[256];
               char *path = getStatusFilePath(entry->d_name, dir);
               fp = fopen(path, "r");
               free(path);
 
+              // file error handling
               if(fp == NULL)
               {
                   printf("Error opening file\n");
                   exit(1);
               }
+
+              // init results
               int rssAnon = 0;
               int rssFile = 0;
               int rssShmem = 0;
@@ -95,12 +128,13 @@ void printdir(char *dir, int depth)
 
               // iterate over each line of the file
               while (fgets(buff, 255, (FILE*)fp) != NULL) {
-
+                // retrieve the name
                 if(strstr(buff, "Name:") != NULL) {
                   removeSubstring(buff, "Name:");
                   strcat(command,trimwhitespace(buff));
                 }
 
+                // handle zombie processes
                 if(strstr(buff, "State:") != NULL) {
                   if(strstr(buff, "Z (zombie)") != NULL) {
                     strncpy(command, command,10);
@@ -109,6 +143,7 @@ void printdir(char *dir, int depth)
                   }
                 }
 
+                // handle the rss values which need to be summed up
                 int tmpAnon = checkForRssLine(buff, "RssAnon:");
 
                 if (tmpAnon > -1) {
@@ -128,20 +163,27 @@ void printdir(char *dir, int depth)
                 }
               }
 
-              // command name
+              // Print the results
+              printf("%s ",entry->d_name);
               printf("%s ", command);
-              // Rss
               printf("%d\n", rssAnon + rssFile + rssShmem);
+
+              // finally close file
               fclose(fp);
             }
         }
     }
+
+    // final steps
     chdir("..");
     closedir(dp);
 }
 
+/**
+* Main entry point
+*/
 int main()
 {
-  printdir("/proc",1);
+  ps("/proc");
   exit(0);
 }
