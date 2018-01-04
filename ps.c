@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+
 void printdir(char *dir, int depth)
 {
     DIR *dp;
@@ -23,21 +24,18 @@ void printdir(char *dir, int depth)
             {
               continue;
             }
-            printf("%*s%s/\n",depth,"",entry->d_name);
-            /* Recurse at a new indent level */
-            //printdir(entry->d_name,depth+4);
+
+            if (statbuf.st_uid == getuid()) {
+              printf("%*s%s/\n",depth,"",entry->d_name);
+            }
         }
-        else printf("%*s%s\n",depth,"",entry->d_name);
     }
     chdir("..");
     closedir(dp);
 }
 
-int main(){
-  int uid = getuid();
-  printf("Directory scan of /home:\n");
+int main()
+{
   printdir("/proc",1);
-  printf("done.\n");
-
   exit(0);
 }
