@@ -44,6 +44,18 @@ char *getStatusFilePath(char *name, char *dir)
   return filePath;
 }
 
+int checkForRssLine(char *line, char *name)
+{
+  int value;
+  if(strstr(line, name) != NULL) {
+    removeSubstring(line, name);
+    removeSubstring(line, "kB");
+    value = atoi(trimwhitespace(line));
+  }
+
+  return value;
+}
+
 void printdir(char *dir, int depth)
 {
     DIR *dp;
@@ -54,7 +66,7 @@ void printdir(char *dir, int depth)
         return;
     }
     chdir(dir);
-    printf("PID COMMMAND RSS\n");
+    printf("PID   COMMMAND       RSS\n");
     while((entry = readdir(dp)) != NULL) {
         lstat(entry->d_name,&statbuf);
         if(S_ISDIR(statbuf.st_mode)) {
@@ -68,21 +80,35 @@ void printdir(char *dir, int depth)
               // Pid
               printf("%s ",entry->d_name);
 
-              // Command
-
-              //printf("%s\n", filePath);
               FILE *fp;
               char buff[255];
               char *path = getStatusFilePath(entry->d_name, dir);
               fp = fopen(path, "r");
               free(path);
-              fgets(buff, 255, (FILE*)fp);
-              removeSubstring(buff, "Name:");
-              printf("%s\n", trimwhitespace(buff));
 
-              // Rss add RssAnon and RssFile and RssShmem
+              if(fp == NULL)
+              {
+                  printf("Error opening file\n");
+                  exit(1);
+              }
+              int rssAnon = 0;
+              int rssFile = 0;
+              int rssShmem = 0;
+              while (fgets(buff, 255, (FILE*)fp) != NULL) {
+                // Command
+                if(strstr(buff, "Name:") != NULL) {
+                  removeSubstring(buff, "Name:");
+                  printf("%s ", trimwhitespace(buff));
+                }
+
+                rssAnon = checkForRssLine(buff, "RssAnon:");
+                rssFile = checkForRssLine(buff, "RssFile:");
+                rssShmem = checkForRssLine(buff, "RssShmem:");
+              }
+
+              // Rss
+              printf(" %d\n", rssAnon + rssFile + rssShmem);
               fclose(fp);
-
             }
         }
     }
