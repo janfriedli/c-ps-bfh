@@ -46,7 +46,7 @@ char *getStatusFilePath(char *name, char *dir)
 
 int checkForRssLine(char *line, char *name)
 {
-  int value;
+  int value = -1;
   if(strstr(line, name) != NULL) {
     removeSubstring(line, name);
     removeSubstring(line, "kB");
@@ -94,6 +94,8 @@ void printdir(char *dir, int depth)
               int rssAnon = 0;
               int rssFile = 0;
               int rssShmem = 0;
+
+              // iterate over each line of the file
               while (fgets(buff, 255, (FILE*)fp) != NULL) {
                 // Command
                 if(strstr(buff, "Name:") != NULL) {
@@ -101,13 +103,27 @@ void printdir(char *dir, int depth)
                   printf("%s ", trimwhitespace(buff));
                 }
 
-                rssAnon = checkForRssLine(buff, "RssAnon:");
-                rssFile = checkForRssLine(buff, "RssFile:");
-                rssShmem = checkForRssLine(buff, "RssShmem:");
+                int tmpAnon = checkForRssLine(buff, "RssAnon:");
+
+                if (tmpAnon > -1) {
+                    rssAnon = tmpAnon;
+                }
+
+                int tmpRssFile = checkForRssLine(buff, "RssFile:");
+
+                if (tmpRssFile > -1) {
+                    rssFile = tmpRssFile;
+                }
+
+                int tmpShmem = checkForRssLine(buff, "RssShmem:");
+
+                if (tmpShmem > -1) {
+                    rssShmem = tmpShmem;
+                }
               }
 
               // Rss
-              printf(" %d\n", rssAnon + rssFile + rssShmem);
+              printf("%d\n", rssAnon + rssFile + rssShmem);
               fclose(fp);
             }
         }
