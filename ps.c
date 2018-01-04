@@ -25,8 +25,6 @@ char *trimwhitespace(char *str)
   return str;
 }
 
-
-
 void removeSubstring(char *s,const char *toremove)
 {
   while( s=strstr(s,toremove) )
@@ -66,7 +64,6 @@ void printdir(char *dir, int depth)
         return;
     }
     chdir(dir);
-    printf("PID   COMMMAND       RSS\n");
     while((entry = readdir(dp)) != NULL) {
         lstat(entry->d_name,&statbuf);
         if(S_ISDIR(statbuf.st_mode)) {
@@ -94,13 +91,22 @@ void printdir(char *dir, int depth)
               int rssAnon = 0;
               int rssFile = 0;
               int rssShmem = 0;
+              char command[256] = "";
 
               // iterate over each line of the file
               while (fgets(buff, 255, (FILE*)fp) != NULL) {
-                // Command
+
                 if(strstr(buff, "Name:") != NULL) {
                   removeSubstring(buff, "Name:");
-                  printf("%s ", trimwhitespace(buff));
+                  strcat(command,trimwhitespace(buff));
+                }
+
+                if(strstr(buff, "State:") != NULL) {
+                  if(strstr(buff, "Z (zombie)") != NULL) {
+                    strncpy(command, command,10);
+                    command[5] = 0;
+                    strcat(command, " <defunct>");
+                  }
                 }
 
                 int tmpAnon = checkForRssLine(buff, "RssAnon:");
@@ -122,6 +128,8 @@ void printdir(char *dir, int depth)
                 }
               }
 
+              // command name
+              printf("%s ", command);
               // Rss
               printf("%d\n", rssAnon + rssFile + rssShmem);
               fclose(fp);
