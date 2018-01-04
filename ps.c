@@ -33,6 +33,17 @@ void removeSubstring(char *s,const char *toremove)
     memmove(s,s+strlen(toremove),1+strlen(s+strlen(toremove)));
 }
 
+char *getStatusFilePath(char *name, char *dir)
+{
+  char *filePath = malloc(12);
+  strcpy(filePath, dir);
+  strcat(filePath, "/");
+  strcat(filePath, name);
+  strcat(filePath, "/status");
+
+  return filePath;
+}
+
 void printdir(char *dir, int depth)
 {
     DIR *dp;
@@ -58,19 +69,18 @@ void printdir(char *dir, int depth)
               printf("%s ",entry->d_name);
 
               // Command
-              char filePath[12];
-              strcpy(filePath, dir);
-              strcat(filePath, "/");
-              strcat(filePath, entry->d_name);
-              strcat(filePath, "/status");
-              //printf("%s\n", filePath);
 
+              //printf("%s\n", filePath);
               FILE *fp;
               char buff[255];
-              fp = fopen(filePath, "r");
+              char *path = getStatusFilePath(entry->d_name, dir);
+              fp = fopen(path, "r");
+              free(path);
               fgets(buff, 255, (FILE*)fp);
               removeSubstring(buff, "Name:");
               printf("%s\n", trimwhitespace(buff));
+
+              // Rss add RssAnon and RssFile and RssShmem
               fclose(fp);
 
             }
